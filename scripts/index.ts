@@ -7,6 +7,9 @@ const entries: ScriptEntries = [
   // build
   ['build', Cmd('tsc -p tsconfig.build.json')],
   ['lint', Cmd('eslint src')],
+
+  // test
+  ['test', Cmd('jest')],
 ];
 
 const name = process.argv[2];
