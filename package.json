@@ -1,7 +1,7 @@
 {
   "name": "@suzulabo/secrets-packer",
   "version": "0.0.1",
-  "description": "Packing tool for secrets files and variablues",
+  "description": "Packing tool for secrets files and variables",
   "homepage": "https://github.com/suzulabo/secrets-packer#readme",
   "repository": {
     "type": "git",
