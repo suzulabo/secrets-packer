@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import JSZip from 'jszip';
 import * as path from 'path';
+import nacl from 'tweetnacl';
+import { SignJSON, SIGN_FILENAME_DEFAULT } from '.';
 import {
   SecretsConfig,
   SECRETS_DIR_DEFAULT,
@@ -31,12 +33,34 @@ export const packSecrets = async (config: SecretsConfig) => {
   }
 
   const packed = await zip.generateAsync({
-    type: 'base64',
+    type: 'uint8array',
     compression: 'DEFLATE',
     compressionOptions: { level: 9 },
   });
 
-  const valuesFilename = config.valuesFilename || VALUES_FILENAME_DEFAULT;
+  const signKey = (() => {
+    const signFilename = config.signFile || path.join(secretsDir, SIGN_FILENAME_DEFAULT);
 
-  fs.writeFileSync(path.join(secretsDir, valuesFilename), packed);
+    if (!fs.existsSync(signFilename)) {
+      const json = JSON.parse(fs.readFileSync(signFilename, 'utf-8')) as SignJSON;
+      const buf = Buffer.from(json.privateKey, 'base64');
+      return new Uint8Array(buf);
+    }
+    const _keys = nacl.sign.keyPair();
+    const keys: SignJSON = {
+      privateKey: Buffer.from(_keys.secretKey).toString('base64'),
+      publicKey: Buffer.from(_keys.publicKey).toString('base64'),
+    };
+
+    fs.writeFileSync(signFilename, JSON.stringify(keys, undefined, 2));
+
+    return _keys.secretKey;
+  })();
+
+  const signed = nacl.sign(packed, signKey);
+  const signedBase64 = Buffer.from(signed).toString('base64');
+
+  const valuesFilename = config.valuesFile || path.join(secretsDir, VALUES_FILENAME_DEFAULT);
+
+  fs.writeFileSync(valuesFilename, signedBase64);
 };

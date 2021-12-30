@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import JSZip from 'jszip';
 import * as path from 'path';
+import nacl from 'tweetnacl';
 import { SecretsConfig, SECRETS_DIR_DEFAULT, SECRETS_JSON_FILENAME } from './types';
 
 export const unpackSecrets = async (config: SecretsConfig) => {
@@ -9,10 +10,23 @@ export const unpackSecrets = async (config: SecretsConfig) => {
     throw 'missing SECRET_VALUES';
   }
 
+  const secretValuesSign = process.env['SECRET_VALUES_SIGN'];
+  if (!secretValuesSign) {
+    throw 'missing SECRET_VALUES_SIGN';
+  }
+
+  const signKey = new Uint8Array(Buffer.from(secretValuesSign, 'base64'));
+  const signed = new Uint8Array(Buffer.from(secretValues, 'base64'));
+
+  const secrets = nacl.sign.open(signed, signKey);
+  if (!secrets) {
+    throw 'sign error';
+  }
+
   const secretsDir = config.secretsDir || SECRETS_DIR_DEFAULT;
 
   const zip = new JSZip();
-  await zip.loadAsync(secretValues, { base64: true });
+  await zip.loadAsync(secrets);
 
   if (!fs.existsSync(secretsDir)) {
     fs.mkdirSync(secretsDir);
