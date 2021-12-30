@@ -2,18 +2,16 @@ import * as fs from 'fs';
 import JSZip from 'jszip';
 import * as path from 'path';
 import nacl from 'tweetnacl';
-import { SignJSON, SIGN_FILENAME_DEFAULT } from '.';
-import {
-  SecretsConfig,
-  SECRETS_DIR_DEFAULT,
-  SECRETS_JSON_FILENAME,
-  VALUES_FILENAME_DEFAULT,
-} from './types';
+import { PACKED_FILENAME_DEFAULT, SignJSON, SIGN_FILENAME_DEFAULT } from '.';
+import { SecretsConfig, SECRETS_DIR_DEFAULT, SECRETS_JSON_FILENAME } from './types';
 
 export const packSecrets = async (config: SecretsConfig) => {
   const zip = new JSZip();
 
   const secretsDir = config.secretsDir || SECRETS_DIR_DEFAULT;
+  if (!fs.existsSync(secretsDir)) {
+    throw `missing secretsDir: ${secretsDir}`;
+  }
 
   if (config.files) {
     for (const [name] of config.files) {
@@ -41,7 +39,7 @@ export const packSecrets = async (config: SecretsConfig) => {
   const signKey = (() => {
     const signFilename = config.signFile || path.join(secretsDir, SIGN_FILENAME_DEFAULT);
 
-    if (!fs.existsSync(signFilename)) {
+    if (fs.existsSync(signFilename)) {
       const json = JSON.parse(fs.readFileSync(signFilename, 'utf-8')) as SignJSON;
       const buf = Buffer.from(json.privateKey, 'base64');
       return new Uint8Array(buf);
@@ -60,7 +58,7 @@ export const packSecrets = async (config: SecretsConfig) => {
   const signed = nacl.sign(packed, signKey);
   const signedBase64 = Buffer.from(signed).toString('base64');
 
-  const valuesFilename = config.valuesFile || path.join(secretsDir, VALUES_FILENAME_DEFAULT);
+  const packedFilename = config.packedFile || path.join(secretsDir, PACKED_FILENAME_DEFAULT);
 
-  fs.writeFileSync(valuesFilename, signedBase64);
+  fs.writeFileSync(packedFilename, signedBase64);
 };

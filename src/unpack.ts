@@ -6,21 +6,21 @@ import { SecretsConfig, SECRETS_DIR_DEFAULT, SECRETS_JSON_FILENAME } from './typ
 
 export const unpackSecrets = async (
   config: SecretsConfig,
-  _secretValues: string,
-  _secretValuesSign: string,
+  _secretPacked?: string,
+  _secretPackedSign?: string,
 ) => {
-  const secretValues = _secretValues || process.env['SECRET_VALUES'];
-  if (!secretValues) {
-    throw 'missing SECRET_VALUES';
+  const secretPacked = _secretPacked || process.env['SECRET_PACKED'];
+  if (!secretPacked) {
+    throw 'missing SECRET_PACKED';
   }
 
-  const secretValuesSign = _secretValuesSign || process.env['SECRET_VALUES_SIGN'];
-  if (!secretValuesSign) {
+  const secretPackedSign = _secretPackedSign || process.env['SECRET_PACKED_SIGN'];
+  if (!secretPackedSign) {
     throw 'missing SECRET_VALUES_SIGN';
   }
 
-  const signKey = new Uint8Array(Buffer.from(secretValuesSign, 'base64'));
-  const signed = new Uint8Array(Buffer.from(secretValues, 'base64'));
+  const signKey = new Uint8Array(Buffer.from(secretPackedSign, 'base64'));
+  const signed = new Uint8Array(Buffer.from(secretPacked, 'base64'));
 
   const secrets = nacl.sign.open(signed, signKey);
   if (!secrets) {
@@ -36,24 +36,27 @@ export const unpackSecrets = async (
     fs.mkdirSync(secretsDir);
   }
 
-  if (config.files) {
-    for (const [name] of config.files) {
-      const f = zip.file(name);
-      if (!f) {
-        throw `missing ${name}`;
-      }
+  const files = new Set(config.files || []);
+  if (config.secretsJSONKeys) {
+    files.add([SECRETS_JSON_FILENAME]);
+  }
 
-      const filename = path.join(secretsDir, name);
-      const data = await f.async('nodebuffer');
-      if (fs.existsSync(filename)) {
-        const cur = fs.readFileSync(filename);
-        console.warn(`${name} already exist (${data.equals(cur) ? 'same' : 'updated'})`);
-        continue;
-      }
-
-      console.info(`unpack: ${name}`);
-      fs.writeFileSync(filename, data);
+  for (const [name] of files) {
+    const f = zip.file(name);
+    if (!f) {
+      throw `missing ${name}`;
     }
+
+    const filename = path.join(secretsDir, name);
+    const data = await f.async('nodebuffer');
+    if (fs.existsSync(filename)) {
+      const cur = fs.readFileSync(filename);
+      console.warn(`${name} already exist (${data.equals(cur) ? 'same' : 'updated'})`);
+      continue;
+    }
+
+    console.info(`unpack: ${name}`);
+    fs.writeFileSync(filename, data);
   }
 
   if (config.secretsJSONKeys) {
