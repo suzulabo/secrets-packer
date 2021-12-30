@@ -4,13 +4,17 @@ import * as path from 'path';
 import nacl from 'tweetnacl';
 import { SecretsConfig, SECRETS_DIR_DEFAULT, SECRETS_JSON_FILENAME } from './types';
 
-export const unpackSecrets = async (config: SecretsConfig) => {
-  const secretValues = process.env['SECRET_VALUES'];
+export const unpackSecrets = async (
+  config: SecretsConfig,
+  _secretValues: string,
+  _secretValuesSign: string,
+) => {
+  const secretValues = _secretValues || process.env['SECRET_VALUES'];
   if (!secretValues) {
     throw 'missing SECRET_VALUES';
   }
 
-  const secretValuesSign = process.env['SECRET_VALUES_SIGN'];
+  const secretValuesSign = _secretValuesSign || process.env['SECRET_VALUES_SIGN'];
   if (!secretValuesSign) {
     throw 'missing SECRET_VALUES_SIGN';
   }
