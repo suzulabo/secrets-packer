@@ -1,1 +1,7 @@
-# secrets-packer
+# Secrets Packer
+
+[Japanese README](README.ja.md)
+
+---
+
+WIP:)
